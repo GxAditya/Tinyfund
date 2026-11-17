@@ -150,6 +150,9 @@ interface FetchedPage {
   published_date?: string | undefined;
 }
 
+const MAX_PAGE_CHARS = 30_000;
+const MAX_PAGE_LINKS = 400;
+
 /** Batched (10 URLs per request), deduped, and trimmed to what's left of the budget. */
 export async function tfFetch(
   keys: Keys,
@@ -173,10 +176,12 @@ export async function tfFetch(
           ...(opts.purpose ? { purpose: opts.purpose } : {}),
         }),
       });
+      // Facts we check (names, round, date, pitch links) sit near the top of a page. Capping text
+      // keeps per-request CPU low enough for Cloudflare's free plan (10 ms CPU per request).
       for (const r of j.results ?? [])
         out[r.url] = {
-          text: String(r.text ?? ""),
-          links: r.links ?? [],
+          text: String(r.text ?? "").slice(0, MAX_PAGE_CHARS),
+          links: (r.links ?? []).slice(0, MAX_PAGE_LINKS),
           title: r.title ?? "",
           published_date: r.published_date ?? undefined,
         };
@@ -654,6 +659,8 @@ export async function discoverDeals(
   keys: Keys,
   p: StartupProfile,
   existing: VerifiedDeal[],
+  /** per-article AI extraction (one model call per page); off for single-request runs */
+  aiExtract = true,
 ): Promise<StepResult> {
   const budget = new Budget("discovery", 7, 20);
   const cutoff = Date.parse(p.cutoffDate || cutoffDate());
@@ -682,7 +689,9 @@ export async function discoverDeals(
     const extracted = await Promise.all(
       candidates
         .filter((c) => (pages[c.url]?.text.length ?? 0) > 300)
-        .map((c) => dealsFromPage(keys, p, c, pages[c.url]!)),
+        .map((c) =>
+          dealsFromPage(aiExtract ? keys : { ...keys, aiKey: undefined }, p, c, pages[c.url]!),
+        ),
     );
     for (const d of extracted.flat()) {
       const v = checkAgainstPage(d, pages[d.source_url!], cutoff);
@@ -901,7 +910,11 @@ export async function buildReport(
   };
 }
 
-/** verify -> (discover if short) -> report, for callers that run the whole pipeline in one go. */
+/**
+ * verify -> (discover if short) -> report, for callers that run the whole pipeline in one go
+ * (the public API). Cloudflare's free plan allows 50 subrequests per request, so discovery uses
+ * the rule-based extractor here instead of one AI call per article (~40 subrequests worst case).
+ */
 export async function runPipeline(
   keys: Keys,
   id: string,
@@ -911,7 +924,7 @@ export async function runPipeline(
   const v = await verifyDeals(keys, p, rows);
   const d =
     v.deals.filter(isUsable).length < TARGET_COMPANIES
-      ? await discoverDeals(keys, p, v.deals)
+      ? await discoverDeals(keys, p, v.deals, false)
       : { deals: v.deals, notes: [] };
   return buildReport(keys, id, p, d.deals, [...v.notes, ...d.notes]);
 }

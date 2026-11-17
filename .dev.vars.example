@@ -1,0 +1,3 @@
+# Copy to .dev.vars for `npm run preview` (wrangler dev). Never commit .dev.vars.
+# Optional: server-side fallback when a user hasn't added their own key in the app.
+TINYFISH_API_KEY=

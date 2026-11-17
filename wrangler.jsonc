@@ -1,0 +1,15 @@
+// Cloudflare Workers config. Nitro merges this into the generated .output/server/wrangler.json at
+// build time and sets `main` and `assets` itself, so don't add those here.
+// With Workers Builds (GitHub connect), the Worker name in the dashboard must match `name`.
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "tinyfund",
+  "compatibility_date": "2026-11-17",
+  "compatibility_flags": ["nodejs_compat"],
+  // Workers Logs: included in the free plan, useful to see failed TinyFish calls.
+  "observability": {
+    "enabled": true,
+  },
+  // Optional server-side fallback key: set TINYFISH_API_KEY as a secret in the dashboard
+  // (Settings > Variables and Secrets), never here. Users normally bring their own key.
+}

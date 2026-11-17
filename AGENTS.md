@@ -11,4 +11,5 @@
 - Install: `npm install` (package-lock.json is the lockfile; `.npmrc` sets `min-release-age=1` as a supply-chain guard)
 - Repo: https://github.com/GxAditya/Tinyfund
 - Dev: `npm run dev` (port 8080) · Build: `npm run build` · Test: `npm test` · Lint: `npm run lint`
-- Deploy target defaults to Cloudflare Workers (nitro `cloudflare-module`); set `NITRO_PRESET` to change it.
+- Deploy: Cloudflare Workers free plan via Workers Builds (GitHub connect): build `npm run build`, deploy `npx wrangler deploy`. Nitro (`cloudflare-module`) merges root `wrangler.jsonc` into `.output/server/wrangler.json`; never put `main`/`assets` or secrets in `wrangler.jsonc`. Verify config with `npx wrangler deploy --dry-run` (no account needed).
+- Free plan limits: 50 subrequests and 10 ms CPU per request. Keep each server function step under ~45 outbound calls (Search/Fetch/AI); the one-request public API runs discovery without per-article AI for this reason.

@@ -114,13 +114,25 @@ Open **Keys** in the header and paste your [TinyFish](https://tinyfish.ai) API k
 | `npm test` | Unit tests |
 | `npm run lint` | ESLint + Prettier |
 
-**Deploy.** The build targets Cloudflare Workers (free tier) by default:
+### Deploy to Cloudflare Workers (free plan, GitHub connect)
 
-```sh
-npm run build && npx nitro deploy --prebuilt
-```
+The repo is ready for [Workers Builds](https://developers.cloudflare.com/workers/ci-cd/builds/): every push to `main` builds and deploys automatically.
 
-Set a [Nitro preset](https://nitro.build/deploy) such as `NITRO_PRESET=node-server`, `vercel` or `netlify` to deploy elsewhere.
+1. In the Cloudflare dashboard, go to **Workers & Pages > Create > Import a repository** and pick `GxAditya/Tinyfund`.
+2. Use these settings:
+   - **Project name:** `tinyfund` (must match `name` in `wrangler.jsonc`)
+   - **Build command:** `npm run build`
+   - **Deploy command:** `npx wrangler deploy` (the default)
+   - **Root directory:** `/`
+3. Optional: under **Settings > Variables and Secrets**, add `TINYFISH_API_KEY` as a **secret** if you want a server-side fallback key. Without it, every visitor uses their own key from the Keys dialog.
+
+Node 24 is picked up from `.node-version`. Nitro builds for Cloudflare and merges `wrangler.jsonc` into the generated config, and `wrangler deploy` finds it automatically.
+
+To deploy from your machine instead: `npx wrangler login`, then `npm run deploy`. To try the production Worker locally: copy `.dev.vars.example` to `.dev.vars`, then `npm run preview:worker`.
+
+**Free plan notes.** Each request gets 50 subrequests and 10 ms of CPU time (waiting on the network doesn't count). TinyFund stays under both by running each pipeline step as its own request, capping page text, and using the rule-based extractor in the single-request public API.
+
+To deploy somewhere else, set a [Nitro preset](https://nitro.build/deploy) such as `NITRO_PRESET=node-server`, `vercel` or `netlify`.
 
 ## Demo
 
